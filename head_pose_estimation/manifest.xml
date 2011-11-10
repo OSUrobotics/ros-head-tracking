@@ -1,0 +1,19 @@
+<package>
+  <description brief="head_pose_estimation">
+
+     head_pose_estimation
+
+  </description>
+  <author>Lazewatsky Daniel</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/head_pose_estimation</url>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <depend package="sensor_msgs"/>
+  <depend package="cv_bridge"/>
+
+</package>
+
+
