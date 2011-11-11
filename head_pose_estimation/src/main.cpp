@@ -50,12 +50,26 @@
 */
 
 #include <string>
+#include <math.h>
 #include <algorithm>
 #include <iostream>
 #include <vector>
 #include "CRForestEstimator.h"
 
+#include <ros/ros.h>
+#include "sensor_msgs/Image.h"
+#include "sensor_msgs/PointCloud2.h"
+// #include "image_transport/image_transport.h"
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+
+#include <pcl_ros/point_cloud.h>
+#include <pcl/point_types.h>
+
+
 #define PATH_SEP "/"
+
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 using namespace std;
 using namespace cv;
@@ -75,209 +89,57 @@ int g_th = 400;
 //threshold for the probability of a patch to belong to a head
 float g_prob_th = 1.0f;
 //threshold on the variance of the leaves
-float g_maxv = 800.f;
+double g_maxv = 800.f;
 //stride (how densely to sample test patches - increase for higher speed)
 int g_stride = 5;
 //radius used for clustering votes into possible heads
-float g_larger_radius_ratio = 1.f;
+double g_larger_radius_ratio = 1.f;
 //radius used for mean shift
-float g_smaller_radius_ratio = 6.f;
+double g_smaller_radius_ratio = 6.f;
 
 //pointer to the actual estimator
 CRForestEstimator* g_Estimate;
 //input 3D image
 Mat g_im3D;
 
+CRForestEstimator estimator;
+
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
 std::vector< Vote > g_votes; //all votes returned by the forest
 
-bool loadDepthImageCompressed(Mat& depthImg, const char* fname ){
-
-	//now read the depth image
-	FILE* pFile = fopen(fname, "rb");
-	if(!pFile){
-		cerr << "could not open file " << fname << endl;
-		return false;
-	}
-
-	int im_width = 0;
-	int im_height = 0;
-	bool success = true;
-
-	success &= ( fread(&im_width,sizeof(int),1,pFile) == 1 ); // read width of depthmap
-	success &= ( fread(&im_height,sizeof(int),1,pFile) == 1 ); // read height of depthmap
-
-	depthImg.create( im_height, im_width, CV_16SC1 );
-	depthImg.setTo(0);
-
-
-	int numempty;
-	int numfull;
-	int p = 0;
-
-	if(!depthImg.isContinuous())
-	{
-		cerr << "Image has the wrong size! (should be 640x480)" << endl;
-		return false;
-	}
-
-	int16_t* data = depthImg.ptr<int16_t>(0);
-	while(p < im_width*im_height ){
-
-		success &= ( fread( &numempty,sizeof(int),1,pFile) == 1 );
-
-		for(int i = 0; i < numempty; i++)
-			data[ p + i ] = 0;
-
-		success &= ( fread( &numfull,sizeof(int), 1, pFile) == 1 );
-		success &= ( fread( &data[ p + numempty ], sizeof(int16_t), numfull, pFile) == (unsigned int) numfull );
-		p += numempty+numfull;
-
-	}
-
-	fclose(pFile);
-
-	return success;
+void loadConfig(ros::NodeHandle nh) {
+	nh.param("tree_path",			g_treepath, string(""));
+	nh.param("ntrees",				g_ntrees, 10);
+	nh.param("max_variance",		g_maxv, 800.0);
+	nh.param("larger_radius_ratio",	g_larger_radius_ratio, 1.0);
+	nh.param("smaller_radius_ratio",g_smaller_radius_ratio, 6.0);
+	nh.param("stride",				g_stride, 5);
+	nh.param("head_threshold",		g_th, 400);
 }
 
-void loadConfig(const char* filename) {
-
-	ifstream in(filename);
-	string dummy;
-
-	if(in.is_open()) {
-
-		// Path to trees
-		in >> dummy;
-		in >> g_treepath;
-
-		// Number of trees
-		in >> dummy;
-		in >> g_ntrees;
-
-		in >> dummy;
-		in >> g_maxv;
-
-		in >> dummy;
-		in >> g_larger_radius_ratio;
-
-		in >> dummy;
-		in >> g_smaller_radius_ratio;
-
-		in >> dummy;
-		in >> g_stride;
-
-		in >> dummy;
-		in >> g_max_z;
-
-		in >> dummy;
-		in >> g_th;
-
-
-	} else {
-		cerr << "File not found " << filename << endl;
-		exit(-1);
-	}
-	in.close();
-
-	cout << endl << "------------------------------------" << endl << endl;
-	cout << "Estimation:       " << endl;
-	cout << "Trees:            " << g_ntrees << " " << g_treepath << endl;
-	cout << "Stride:           " << g_stride << endl;
-	cout << "Max Variance:     " << g_maxv << endl;
-	cout << "Max Distance:     " << g_max_z << endl;
-	cout << "Head Threshold:   " << g_th << endl;
-
-	cout << endl << "------------------------------------" << endl << endl;
-
-}
-
-int main(int argc, char* argv[])
+void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-
-	if( argc != 3 ){
-
-		cout << "usage: ./head_pose_estimation config_file depth_image" << endl;
-		exit(-1);
-	}
-
-	loadConfig(argv[1]);
-	CRForestEstimator estimator;
-	if( !estimator.loadForest(g_treepath.c_str(), g_ntrees) ){
-
-		cerr << "could not read forest!" << endl;
-		exit(-1);
-	}
-
-	string depth_fname(argv[2]);
-
-	//read calibration file (should be in the same directory as the depth image!)
-	string cal_filename = depth_fname.substr(0,depth_fname.find_last_of('/'));
-	cal_filename += "/depth.cal";
-	ifstream is(cal_filename.c_str());
-	if (!is){
-
-		cerr << "depth.cal file not found in the same folder as the depth image! " << endl;
-		return -1;
-
-	}
-	//read intrinsics only
-	float depth_intrinsic[9];	for(int i =0; i<9; ++i)	is >> depth_intrinsic[i];
-	is.close();
-
-	Mat depthImg;
-	//read depth image (compressed!)
-	if (!loadDepthImageCompressed( depthImg, depth_fname.c_str() ))
-		return -1;
-
-
+	PointCloud cloud;
+	pcl::fromROSMsg(*msg, cloud);
 	Mat img3D;
-	img3D.create( depthImg.rows, depthImg.cols, CV_32FC3 );
+	img3D.create( cloud.height, cloud.width, CV_32FC3 );
+	
 
 	//get 3D from depth
-	for(int y = 0; y < img3D.rows; y++)
-	{
+	for(int y = 0; y < img3D.rows; y++) {
 		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
-		const int16_t* depthImgi = depthImg.ptr<int16_t>(y);
-
-		for(int x = 0; x < img3D.cols; x++){
-
-			float d = (float)depthImgi[x];
-
-			if ( d < g_max_z && d > 0 ){
-
-				img3Di[x][0] = d * (float(x) - depth_intrinsic[2])/depth_intrinsic[0];
-				img3Di[x][1] = d * (float(y) - depth_intrinsic[5])/depth_intrinsic[4];
-				img3Di[x][2] = d;
-
-			}
-			else{
-
-				img3Di[x] = 0;
-			}
-
+	
+		for(int x = 0; x < img3D.cols; x++) {
+			img3Di[x][0] = cloud.at(x, y).x;
+			img3Di[x][1] = cloud.at(x, y).y;
+			img3Di[x][2] = cloud.at(x, y).z;
 		}
 	}
-
+	
 	g_means.clear();
 	g_votes.clear();
 	g_clusters.clear();
-
-	string pose_filename(depth_fname.substr(0,depth_fname.find_last_of('_')));
-	pose_filename += "_pose.bin";
-
-	cv::Vec<float,POSE_SIZE> gt;
-	bool have_gt = false;
-	//try to read in the ground truth from a binary file
-	FILE* pFile = fopen(pose_filename.c_str(), "rb");
-	if(pFile){
-
-		have_gt = true;
-		have_gt &= ( fread( &gt[0], sizeof(float),POSE_SIZE, pFile) == POSE_SIZE );
-		fclose(pFile);
-
-	}
 
 	//do the actual estimate
 	estimator.estimate( 	img3D,
@@ -292,42 +154,39 @@ int main(int argc, char* argv[])
 							false,
 							g_th
 						);
-
+	
 	cout << "Heads found : " << g_means.size() << endl;
-
+	
 	//assuming there's only one head in the image!
 	if(g_means.size()>0){
-
+	
 		cout << "Estimated: " << g_means[0][0] << " " << g_means[0][1] << " " << g_means[0][2] << " " << g_means[0][3] << " " << g_means[0][4] << " " << g_means[0][5] <<endl;
-
+	
 		float pt2d_est[2];
 		float pt2d_gt[2];
+		
+		// pt2d_est[0] = depth_intrinsic[0]*g_means[0][0]/g_means[0][2] + depth_intrinsic[2];
+		// pt2d_est[1] = depth_intrinsic[4]*g_means[0][1]/g_means[0][2] + depth_intrinsic[5];
+	
+	}
+	
+}
 
-		if(have_gt){
-			cout << "Ground T.: " << gt[0] << " " << gt[1] << " " << gt[2] << " " << gt[3] << " " << gt[4] << " " << gt[5] <<endl;
+int main(int argc, char* argv[])
+{
 
-			cv::Vec<float,POSE_SIZE> err = (gt-g_means[0]);
-			//multiply(err,err,err);
-			for(int n=0;n<POSE_SIZE;++n)
-				err[n] = err[n]*err[n];
-
-			float h_err = sqrt(err[0]+err[1]+err[2]);
-			float a_err = sqrt(err[3]+err[4]+err[5]);
-
-			cout << "Head error : " << h_err << " mm " << endl;
-			cout << "Angle error : " << a_err <<" degrees " <<  endl;
-
-			pt2d_gt[0] = depth_intrinsic[0]*gt[0]/gt[2] + depth_intrinsic[2];
-			pt2d_gt[1] = depth_intrinsic[4]*gt[1]/gt[2] + depth_intrinsic[5];
-
-		}
-
-		pt2d_est[0] = depth_intrinsic[0]*g_means[0][0]/g_means[0][2] + depth_intrinsic[2];
-		pt2d_est[1] = depth_intrinsic[4]*g_means[0][1]/g_means[0][2] + depth_intrinsic[5];
-
+	ros::init(argc, argv, "head_pose_estimator");
+	ros::NodeHandle nh;
+	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
+	
+	loadConfig(nh);
+	
+	if( !estimator.loadForest(g_treepath.c_str(), g_ntrees) ){
+		ROS_ERROR("could not read forest!");
+		exit(-1);
 	}
 
+	ros::spin();
 	return 0;
 
 }
-
