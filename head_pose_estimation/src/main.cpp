@@ -66,13 +66,15 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
-
-#define PATH_SEP "/"
+#include <kdl/frames.hpp>
+#include <angles/angles.h>
+#include <geometry_msgs/PoseStamped.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 using namespace std;
 using namespace cv;
+using namespace angles;
 
 // Path to trees
 string g_treepath;
@@ -103,12 +105,15 @@ CRForestEstimator* g_Estimate;
 Mat g_im3D;
 
 CRForestEstimator estimator;
-
-
+ros::Publisher cloud_pub;
+ros::Publisher pose_pub;
 
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
 std::vector< Vote > g_votes; //all votes returned by the forest
+
+cv::Rect roi;
+bool roiReady = false;
 
 void loadConfig(ros::NodeHandle nh) {
 	nh.param("tree_path",			g_treepath,				string("trees/tree"));
@@ -117,74 +122,46 @@ void loadConfig(ros::NodeHandle nh) {
 	nh.param("larger_radius_ratio",	g_larger_radius_ratio,	1.0);
 	nh.param("smaller_radius_ratio",g_smaller_radius_ratio,	6.0);
 	nh.param("stride",				g_stride,				5);
-	nh.param("head_threshold",		g_th,					400);
-	
-	ROS_INFO("------------------------------------");
-	ROS_INFO("Trees:            %d", g_ntrees);
-	ROS_INFO("Stride:           %d", g_stride);
-	ROS_INFO("Max Variance:     %f", g_maxv);
-	ROS_INFO("Head Threshold:   %d", g_th);
-	ROS_INFO("------------------------------------");
-	
+	nh.param("head_threshold",		g_th,					400);	
+}
+
+void roiCallback(const sensor_msgs::RegionOfInterest::ConstPtr& msg) {
+	roi = cv::Rect(msg->x_offset, msg->y_offset, msg->width, msg->height);
+	roiReady = true;
 }
 
 void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
-//void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msgs::CameraInfoConstPtr& info)
 {
 
 	PointCloud cloud;
 	pcl::fromROSMsg(*msg, cloud);
-//	cv_bridge::CvImagePtr cv_ptr;
-//	try{
-//		cv_ptr = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_32FC1);
-//	}catch (cv_bridge::Exception& e){
-//		ROS_ERROR("cv_bridge exception: %s", e.what());
-//	}
 
-//	cv::Mat depthImg = cv_ptr->image;
 	Mat img3D;
 	img3D.create(cloud.height, cloud.width, CV_32FC3);
-	//img3D.create( depthImg.rows, depthImg.cols, CV_32FC3 );
 	
+	int yMin, xMin, yMax, xMax;
+	yMin = 0; xMin = 0;
+	yMax = img3D.rows; xMax = img3D.cols;
+	if(roiReady) {
+		yMin = roi.y;
+		xMin = roi.x;
+		yMax = yMin + roi.height;
+		xMax = xMin + roi.width;
+	}
+	//ROS_INFO("x=%d, y=%d", x, y);
 	//get 3D from depth
-	for(int y = 0; y < img3D.rows; y++) {
+	for(int y = yMin ; y < img3D.rows; y++) {
 		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
 	
-		for(int x = 0; x < img3D.cols; x++) {
+		for(int x = xMin; x < img3D.cols; x++) {
 			if(cloud.at(x,y).z < 2) { //this part is a bit of a hack - eventaully, do real head segmentation
 				img3Di[x][0] = cloud.at(x, y).x*1000;
 				img3Di[x][1] = cloud.at(x, y).y*1000;
 				img3Di[x][2] = cloud.at(x, y).z*1000;
-}
+			}
 		}
 	}
 
-//	for(int y = 0; y < img3D.rows; y++)
-//	{
-//		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
-//		const float* depthImgi = depthImg.ptr<float>(y);
-//	
-//		for(int x = 0; x < img3D.cols; x++){
-//	
-//			float d = depthImgi[x] * 1000;
-//			if ( d < 2000 ){
-//				img3Di[x][0] = d * (float(x) - info->K[2])/info->K[0];
-//				img3Di[x][1] = d * (float(y) - info->K[5])/info->K[4];
-//				img3Di[x][2] = d;
-//				
-//	
-//			}
-//			else{
-//				img3Di[x] = 0;
-//			}
-//	
-//		}
-//	}
-	
-	//exit(0);
-	
-	imshow("win", img3D);
-	waitKey(100);
 	g_means.clear();
 	g_votes.clear();
 	g_clusters.clear();
@@ -211,23 +188,50 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		cout << "Estimated: " << g_means[0][0] << " " << g_means[0][1] << " " << g_means[0][2] << " " << g_means[0][3] << " " << g_means[0][4] << " " << g_means[0][5] <<endl;
 	
 		float pt2d_est[2];
-		float pt2d_gt[2];
-		
-		// pt2d_est[0] = info->K[0]*g_means[0][0]/g_means[0][2] + info->K[2];
-		// pt2d_est[1] = info->K[4]*g_means[0][1]/g_means[0][2] + info->K[5];
-	
+		float pt2d_gt[2];	
 	}
+	PointCloud::Ptr out (new PointCloud);
+	out->header.stamp = ros::Time::now();
+	out->header.frame_id = msg->header.frame_id;
 	
+	cv::Vec<float,POSE_SIZE> pose(g_means[0]);
+	
+	
+	out->points.push_back(pcl::PointXYZ(pose[0]/1000, pose[1]/1000, pose[2]/1000));
+	
+	KDL::Rotation r = KDL::Rotation::RPY(
+										 from_degrees(pose[4]), 
+										 from_degrees(pose[3]+90), 
+										 from_degrees(pose[5])
+										); //don't forget to convert these to radians
+	double qx, qy, qz, qw;
+	r.GetQuaternion(qx, qy, qz, qw);
+	
+	geometry_msgs::PoseStamped pose_msg;
+	pose_msg.header = out->header;
+	pose_msg.pose.position.x = out->points[0].x;
+	pose_msg.pose.position.y = out->points[0].y;
+	pose_msg.pose.position.z = out->points[0].z;
+	
+	pose_msg.pose.orientation.x = qx;
+	pose_msg.pose.orientation.y = qy;
+	pose_msg.pose.orientation.z = qz;
+	pose_msg.pose.orientation.w = qw;
+	
+	cloud_pub.publish(out);
+	pose_pub.publish(pose_msg);
 }
 
 int main(int argc, char* argv[])
 {
-	namedWindow("win");
 	ros::init(argc, argv, "head_pose_estimator");
 	ros::NodeHandle nh;
 	image_transport::ImageTransport it(nh);
 	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
-	//image_transport::CameraSubscriber depth_sub = it.subscribeCamera("depth", 1, depthCallback);
+	ros::Subscriber roi_sub = nh.subscribe<sensor_msgs::RegionOfInterest>("roi", 1, roiCallback);
+	
+	cloud_pub = nh.advertise<PointCloud>("normal", 1);
+	pose_pub = nh.advertise<geometry_msgs::PoseStamped>("head_pose", 1);
 	
 	loadConfig(nh);
 	ROS_INFO("tree path: %s", g_treepath.c_str());
