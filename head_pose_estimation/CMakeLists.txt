@@ -31,8 +31,10 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 rosbuild_add_executable( head_pose_estimation ${HEAD_DEMO})
-target_link_libraries (head_pose_estimation ${OpenCV_LIBS} )
+# rosbuild_add_executable( range_to_pcd src/range_to_pcd.cpp)
+# target_link_libraries (head_pose_estimation ${OpenCV_LIBS} )
+# target_link_libraries( range_to_pcd ${OpenCV_LIBS})
+# target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
