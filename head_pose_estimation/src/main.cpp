@@ -109,17 +109,10 @@ CRForestEstimator* g_Estimate;
 Mat g_im3D;
 
 CRForestEstimator estimator;
-ros::Publisher cloud_pub;
 ros::Publisher pose_pub;
-
 
 tf::TransformListener* listener;
 string frame = "/openni_rgb_optical_frame";
-
-//debug
-int o_y = 0;
-int o_p = 0;
-int o_r = 0;
 
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
@@ -161,7 +154,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		yMax = yMin + roi.height;
 		xMax = xMin + roi.width;
 	}
-	//ROS_INFO("x=%d, y=%d", x, y);
+
 	//get 3D from depth
 	for(int y = yMin ; y < img3D.rows; y++) {
 		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
@@ -195,94 +188,57 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 							g_th
 						);
 	
-	cout << "Heads found : " << g_means.size() << endl;
-	
 	//assuming there's only one head in the image!
-	if(g_means.size()>0){
-	
-		//cout << "Estimated: " << g_means[0][0] << "\t" << g_means[0][1] << "\t" << g_means[0][2] << "\t" << g_means[0][3] << "\t" << g_means[0][4] << "\t" << g_means[0][5] <<endl;
-	
-		
-	}
-	PointCloud::Ptr out (new PointCloud);
-	out->header.stamp = ros::Time::now();
-	out->header.frame_id = msg->header.frame_id;
+	geometry_msgs::PoseStamped pose_msg;
+	pose_msg.header.stamp = ros::Time::now();
+	pose_msg.header.frame_id = msg->header.frame_id;
 	
 	cv::Vec<float,POSE_SIZE> pose(g_means[0]);
 	
-	printf("RPY=(%4.2f,\t%4.2f,\t%4.2f)\n", pose[3], pose[4], pose[5]);
-	
-	
-	out->points.push_back(pcl::PointXYZ(pose[0]/1000, pose[1]/1000, pose[2]/1000));
-	
 	KDL::Rotation r = KDL::Rotation::RPY(
-										 from_degrees( pose[5]+o_r), 
-										 from_degrees(-pose[3]+o_p),
-										 from_degrees( pose[4]+o_y)
+										 from_degrees( pose[5]    ), 
+										 from_degrees(-pose[3]+180),
+										 from_degrees(-pose[4]    )
 										);
 	double qx, qy, qz, qw;
 	r.GetQuaternion(qx, qy, qz, qw);
 	
-	geometry_msgs::PoseStamped pose_msg;
-	pose_msg.header = out->header;
-	//pose_msg.header.frame_id = frame;
-	
 	geometry_msgs::PointStamped head_point;
 	geometry_msgs::PointStamped head_point_transformed;
-	head_point.header = out->header;
-	head_point.point.x = out->points[0].x;
-	head_point.point.y = out->points[0].y;
-	head_point.point.z = out->points[0].z;
+	
+	head_point.header = pose_msg.header;
+
+	head_point.point.x = pose[0]/1000;
+	head_point.point.y = pose[1]/1000;
+	head_point.point.z = pose[2]/1000;
 	
 	try {
 		listener->transformPoint("/openni_depth_frame", head_point, head_point_transformed);
 	} catch(tf::TransformException ex) {
-		ROS_WARN("Transform exception, dropping pose");
+		ROS_WARN("Transform exception, dropping pose (don't worry, this is probably ok)");
 		return;
 	}
 	pose_msg.pose.position = head_point_transformed.point;
 	pose_msg.header.frame_id = head_point_transformed.header.frame_id;
 	
-//	pose_msg.pose.position.x = out->points[0].x;
-//	pose_msg.pose.position.y = out->points[0].y;
-//	pose_msg.pose.position.z = out->points[0].z;
-	
 	pose_msg.pose.orientation.x = qx;
 	pose_msg.pose.orientation.y = qy;
 	pose_msg.pose.orientation.z = qz;
 	pose_msg.pose.orientation.w = qw;
-	
 
-
-
-
-	cloud_pub.publish(out);
 	pose_pub.publish(pose_msg);
-	//imshow("win", img3D);
-	//waitKey(20);
 }
 
 int main(int argc, char* argv[])
 {
-	//namedWindow("win");
 	ros::init(argc, argv, "head_pose_estimator");
-//	if(argc > 1) {
-//		frame = string(argv[1]);
-//		//ROS_INFO("frame is %s", frame);
-//	}
-	if(argc > 3) {
-		o_y = atoi(argv[1]);
-		o_p = atoi(argv[2]);
-		o_r = atoi(argv[3]);
-		ROS_INFO("(%d, %d, %d)", o_y, o_p, o_r);
-	}
+
 	ros::NodeHandle nh;
 	listener = new tf::TransformListener();
 	image_transport::ImageTransport it(nh);
 	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
 	ros::Subscriber roi_sub = nh.subscribe<sensor_msgs::RegionOfInterest>("roi", 1, roiCallback);
 	
-	cloud_pub = nh.advertise<PointCloud>("normal", 1);
 	pose_pub = nh.advertise<geometry_msgs::PoseStamped>("head_pose", 1);
 	
 	loadConfig(nh);
