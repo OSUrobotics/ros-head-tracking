@@ -108,6 +108,8 @@ CRForestEstimator* g_Estimate;
 //input 3D image
 Mat g_im3D;
 
+double g_last_head_depth = 0.5;
+
 CRForestEstimator estimator;
 ros::Publisher pose_pub;
 
@@ -130,15 +132,6 @@ void loadConfig() {
 	nh.param("smaller_radius_ratio",g_smaller_radius_ratio,	6.0);
 	nh.param("stride",				g_stride,				5);
 	nh.param("head_threshold",		g_th,					400);
-	
-	// 
-	// ROS_INFO("tree_path			%s",g_treepath.c_str());
-	// ROS_INFO("ntrees				%d",g_ntrees);
-	// ROS_INFO("max_variance		%f",g_maxv);
-	// ROS_INFO("larger_radius_ratio	%f",g_larger_radius_ratio);
-	// ROS_INFO("smaller_radius_ratio%f",g_smaller_radius_ratio);
-	// ROS_INFO("stride				%d",g_stride);
-	// ROS_INFO("head_threshold		%d",g_th);
 }
 
 void roiCallback(const sensor_msgs::RegionOfInterest::ConstPtr& msg) {
@@ -148,38 +141,41 @@ void roiCallback(const sensor_msgs::RegionOfInterest::ConstPtr& msg) {
 
 void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
-
 	PointCloud cloud;
 	pcl::fromROSMsg(*msg, cloud);
 
 	Mat img3D;
-	img3D.create(cloud.height, cloud.width, CV_32FC3);
+	img3D = Mat::zeros(cloud.height, cloud.width, CV_32FC3);
+	//img3D.create(cloud.height, cloud.width, CV_32FC3);
 	
 	int yMin, xMin, yMax, xMax;
 	yMin = 0; xMin = 0;
 	yMax = img3D.rows; xMax = img3D.cols;
-	if(roiReady) {
-		yMin = roi.y;
-		xMin = roi.x;
-		yMax = yMin + roi.height;
-		xMax = xMin + roi.width;
-	}
+
+	double head_depth = cloud.at(roi.x + roi.width/2,roi.y + roi.height/2).z;
+	
+	//threshold around the detected face
+	if(head_depth > 0) //if head_depth is nan, this will return false
+		g_last_head_depth = head_depth;
+	else
+		head_depth = g_last_head_depth;
 
 	//get 3D from depth
 	for(int y = yMin ; y < img3D.rows; y++) {
 		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
 	
 		for(int x = xMin; x < img3D.cols; x++) {
-			if(cloud.at(x,y).z < 2) { //this part is a bit of a hack - eventaully, do real head segmentation
-				img3Di[x][0] = cloud.at(x, y).x*1000;
-				img3Di[x][1] = cloud.at(x, y).y*1000;
-				img3Di[x][2] = cloud.at(x, y).z*1000;
+			pcl::PointXYZ p = cloud.at(x,y);
+			if((p.z>head_depth-0.2) && (p.z<head_depth+0.2)) {
+				img3Di[x][0] = p.x*1000;
+				img3Di[x][1] = p.y*1000;
+				img3Di[x][2] = p.z*1000;
 			} else {
 				img3Di[x] = 0;
 			}
 		}
 	}
-
+	
 	g_means.clear();
 	g_votes.clear();
 	g_clusters.clear();
@@ -207,7 +203,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		cv::Vec<float,POSE_SIZE> pose(g_means[0]);
 	
 		KDL::Rotation r = KDL::Rotation::RPY(
-											 from_degrees( pose[5]    ), 
+											 from_degrees( pose[5]+180), 
 											 from_degrees(-pose[3]+180),
 											 from_degrees(-pose[4]    )
 											);
@@ -244,7 +240,6 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 int main(int argc, char* argv[])
 {
 	ros::init(argc, argv, "head_pose_estimator");
-
 	ros::NodeHandle nh;
 	listener = new tf::TransformListener();
 	image_transport::ImageTransport it(nh);
