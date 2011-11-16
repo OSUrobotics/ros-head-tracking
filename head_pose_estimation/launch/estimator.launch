@@ -1,0 +1,12 @@
+<launch>
+	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen">
+		<remap from="cloud" to="/camera/depth/points"/>
+		<param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/>
+		<param name="ntrees" value="10"/>
+		<param name="max_variance" value="800.0"/>
+		<param name="larger_radius_ratio" value="1.0"/>
+		<param name="smaller_radius_ratio" value="6.0"/>
+		<param name="stride" value="5"/>
+		<param name="head_threshold" value="400"/>
+	</node>
+</launch>
