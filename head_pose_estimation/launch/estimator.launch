@@ -1,4 +1,6 @@
 <launch>
+	<include file="$(find pi_face_tracker)/launch/face_tracker_kinect.launch"/>
+
 	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen">
 		<remap from="cloud" to="/camera/depth/points"/>
 		<param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/>
@@ -8,5 +10,9 @@
 		<param name="smaller_radius_ratio" value="6.0"/>
 		<param name="stride" value="5"/>
 		<param name="head_threshold" value="400"/>
+	</node>
+	
+	<node name="head_pose_filter" type="head_pose_filter.py" pkg="head_pose_estimation" output="screen">
+		<param name="window_size" value="5"/>
 	</node>
 </launch>

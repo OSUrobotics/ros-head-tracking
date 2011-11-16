@@ -9,6 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/head_pose_estimation</url>
   <depend package="roscpp"/>
+  <depend package="rospy"/>
   <depend package="geometry_msgs"/>
   <depend package="tf"/>
   <depend package="sensor_msgs"/>
