@@ -73,6 +73,7 @@
 #include <geometry_msgs/PointStamped.h>
 
 #include <tf/transform_listener.h>
+#include <tf/transform_broadcaster.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
@@ -114,7 +115,9 @@ CRForestEstimator estimator;
 ros::Publisher pose_pub;
 
 tf::TransformListener* listener;
-string frame = "/openni_rgb_optical_frame";
+tf::TransformBroadcaster* broadcaster;
+
+// string frame = "/openni_rgb_optical_frame";
 
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
@@ -169,7 +172,8 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 			if((p.z>head_depth-0.2) && (p.z<head_depth+0.2)) {
 				img3Di[x][0] = p.x*1000;
 				img3Di[x][1] = p.y*1000;
-				img3Di[x][2] = p.z*1000;
+				img3Di[x][2] = hypot(img3Di[x][0], p.z*1000); //they seem to have trained with incorrectly projected 3D points
+				//img3Di[x][2] = p.z*1000;
 			} else {
 				img3Di[x] = 0;
 			}
@@ -225,6 +229,9 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 			ROS_WARN("Transform exception, dropping pose (don't worry, this is probably ok)");
 			return;
 		}
+		
+		tf::Transform trans;
+		
 		pose_msg.pose.position = head_point_transformed.point;
 		pose_msg.header.frame_id = head_point_transformed.header.frame_id;
 	
@@ -232,6 +239,14 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		pose_msg.pose.orientation.y = qy;
 		pose_msg.pose.orientation.z = qz;
 		pose_msg.pose.orientation.w = qw;
+
+		trans.setOrigin(tf::Vector3(
+			pose_msg.pose.position.x, 
+			pose_msg.pose.position.y, 
+			pose_msg.pose.position.z
+		));
+		trans.setRotation(tf::Quaternion(qx, qy, qz, qw));
+		broadcaster->sendTransform(tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin"));
 
 		pose_pub.publish(pose_msg);
 	}
@@ -241,7 +256,10 @@ int main(int argc, char* argv[])
 {
 	ros::init(argc, argv, "head_pose_estimator");
 	ros::NodeHandle nh;
+	
 	listener = new tf::TransformListener();
+	broadcaster = new tf::TransformBroadcaster();
+	
 	image_transport::ImageTransport it(nh);
 	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
 	ros::Subscriber roi_sub = nh.subscribe<sensor_msgs::RegionOfInterest>("roi", 1, roiCallback);
