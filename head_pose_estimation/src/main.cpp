@@ -117,8 +117,6 @@ ros::Publisher pose_pub;
 tf::TransformListener* listener;
 tf::TransformBroadcaster* broadcaster;
 
-// string frame = "/openni_rgb_optical_frame";
-
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
 std::vector< Vote > g_votes; //all votes returned by the forest
