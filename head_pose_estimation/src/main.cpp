@@ -109,6 +109,9 @@ CRForestEstimator* g_Estimate;
 //input 3D image
 Mat g_im3D;
 
+// Frame to transform the head pose to
+string g_head_target_frame;
+
 double g_last_head_depth = 0.5;
 
 CRForestEstimator estimator;
@@ -133,6 +136,7 @@ void loadConfig() {
 	nh.param("smaller_radius_ratio",g_smaller_radius_ratio,	6.0);
 	nh.param("stride",				g_stride,				5);
 	nh.param("head_threshold",		g_th,					400);
+	nh.param("head_target_frame",   g_head_target_frame,    string("/camera_depth_frame"));
 }
 
 void roiCallback(const sensor_msgs::RegionOfInterest::ConstPtr& msg) {
@@ -222,7 +226,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		head_point.point.z = pose[2]/1000;
 	
 		try {
-			listener->transformPoint("/openni_depth_frame", head_point, head_point_transformed);
+			listener->transformPoint(g_head_target_frame, head_point, head_point_transformed);
 		} catch(tf::TransformException ex) {
 			ROS_WARN("Transform exception, dropping pose (don't worry, this is probably ok)");
 			return;
