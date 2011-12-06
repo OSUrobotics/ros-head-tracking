@@ -129,13 +129,13 @@ bool roiReady = false;
 
 void loadConfig() {
 	ros::NodeHandle nh("~");
-	nh.param("tree_path",			g_treepath,				string("trees/tree"));
-	nh.param("ntrees",				g_ntrees,				10);
-	nh.param("max_variance",		g_maxv,					800.0);
-	nh.param("larger_radius_ratio",	g_larger_radius_ratio,	1.0);
-	nh.param("smaller_radius_ratio",g_smaller_radius_ratio,	6.0);
-	nh.param("stride",				g_stride,				5);
-	nh.param("head_threshold",		g_th,					400);
+	nh.param("tree_path",           g_treepath,             string("trees/tree"));
+	nh.param("ntrees",              g_ntrees,               10);
+	nh.param("max_variance",        g_maxv,                 800.0);
+	nh.param("larger_radius_ratio", g_larger_radius_ratio,  1.0);
+	nh.param("smaller_radius_ratio",g_smaller_radius_ratio, 6.0);
+	nh.param("stride",              g_stride,               5);
+	nh.param("head_threshold",      g_th,                   400);
 	nh.param("head_target_frame",   g_head_target_frame,    string("/camera_depth_frame"));
 }
 
