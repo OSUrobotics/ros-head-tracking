@@ -21,6 +21,7 @@
   <depend package="angles"/>
   <depend package="message_filters"/>
   <depend package="dynamic_reconfigure"/>
+  <depend package="headmath"/>
 </package>
 
 
