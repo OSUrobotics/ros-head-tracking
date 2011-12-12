@@ -1,0 +1,17 @@
+<package>
+  <description brief="rosmouse">
+
+     rosmouse
+
+  </description>
+  <author>Lazewatsky Daniel</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosmouse</url>
+  <depend package="geometry_msgs"/>
+  <depend package="rospy"/>
+  <depend package="headmath"/>
+
+</package>
+
+
