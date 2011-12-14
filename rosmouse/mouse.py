@@ -8,9 +8,10 @@ from headmath.conversions import pose_quat_to_euler, pose_euler_to_quat
 from threading import RLock, Thread
 from functools import wraps
 from math import tan
-from rosmouse.filters import MeanFilter
+from rosmouse.filters import MeanFilter, KalmanFilter
 from dynamic_reconfigure.server import Server
 from rosmouse.cfg import MouseConfig
+import numpy as np
 
 def move_mouse(x,y):
     dll = cdll.LoadLibrary('libX11.so')
@@ -48,7 +49,8 @@ class Mouse(object):
 	last_pose = None
 	pose_lock = RLock()
 	
-	filter = MeanFilter(window_size=5)
+	cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,   1.9369e3]])
+	filter = KalmanFilter(cov, 2, 2)
 	
 	def __init__(self):
 		self.subscribe()
@@ -76,6 +78,8 @@ class Mouse(object):
 				self.ready = True
 			elif cmd == 'q':
 				rospy.signal_shutdown(0)
+			elif cmd == 'h':
+				print help_msg3	
 
 	@thread
 	def calibrate_threaded(self):
@@ -117,14 +121,16 @@ class Mouse(object):
 		pose = pose_quat_to_euler(pose_msg)
 		if self.ready:
 			obs = [self.xFun(tan(pose[5])), self.yFun(tan(pose[4]))]
-			x, y = self.filter.observation(obs)
+			x, y = [int(n) for n in self.filter.observation(obs)]
 			move_mouse(x, y)
 		else:
 			with self.pose_lock:
 				self.last_pose = pose
 				
 	def config_cb(self, config, level):
-		self.filter = MeanFilter(window_size=config['window_size'])
+		#self.filter = MeanFilter(window_size=config['window_size'])
+		cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,   1.9369e3]])
+		self.filter = KalmanFilter(cov, 2, 2)
 		return config
 
 if __name__ == '__main__':
