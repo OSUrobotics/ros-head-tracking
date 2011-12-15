@@ -49,7 +49,8 @@ class Mouse(object):
 	last_pose = None
 	pose_lock = RLock()
 	
-	cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,   1.9369e3]])
+    # cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,   1.9369e3]])
+	cov = np.matrix([[6.71485028,  18.75061549], [ 14.25320564,  82.71265061]])
 	filter = KalmanFilter(cov, 2, 2)
 	
 	def __init__(self):
@@ -79,7 +80,7 @@ class Mouse(object):
 			elif cmd == 'q':
 				rospy.signal_shutdown(0)
 			elif cmd == 'h':
-				print help_msg3	
+				print help_msg
 
 	@thread
 	def calibrate_threaded(self):
@@ -129,7 +130,7 @@ class Mouse(object):
 				
 	def config_cb(self, config, level):
 		#self.filter = MeanFilter(window_size=config['window_size'])
-		cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,   1.9369e3]])
+		cov = np.matrix([[ 3844.37658853,  1483.79897381], [ 1483.79897381,  2648.80916764]])
 		self.filter = KalmanFilter(cov, 2, 2)
 		return config
 
