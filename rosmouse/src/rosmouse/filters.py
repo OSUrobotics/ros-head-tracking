@@ -13,9 +13,12 @@ class MeanFilter(object):
 
 class KalmanFilter(object):
 	def __init__(self, cov, dynam_params, measure_params):
-		cov = np.float32(cov)
 		self.kf = cv.CreateKalman(dynam_params, measure_params)
 		cv.SetIdentity(self.kf.measurement_matrix, cv.RealScalar(1))
+		self.set_cov(cov)
+
+	def set_cov(self, cov):
+		cov = np.float32(cov)
 		cv.Copy(cv.fromarray(cov), self.kf.measurement_noise_cov)
 		assert np.all(cov == np.asarray(self.kf.measurement_noise_cov)), "Covariance matrix didn't get set"
 		

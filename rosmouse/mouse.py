@@ -129,9 +129,18 @@ class Mouse(object):
 				self.last_pose = pose
 				
 	def config_cb(self, config, level):
-		#self.filter = MeanFilter(window_size=config['window_size'])
 		cov = np.matrix([[ 3844.37658853,  1483.79897381], [ 1483.79897381,  2648.80916764]])
-		self.filter = KalmanFilter(cov, 2, 2)
+		if config['filter_type'] == 1:
+			rospy.loginfo('Setting window size to %s' % config['window_size'])
+			self.filter = MeanFilter(window_size=config['window_size'])
+		elif config['filter_type'] == 2:
+			if type(self.filter) == KalmanFilter:
+				rospy.loginfo('Setting covariance multiplier to %s' % config['cov_mul'])
+				self.filter.set_cov(cov*config['cov_mul'])
+			else:
+				rospy.loginfo('Switching to Kalman Filter with covariance multiplier to %s' % config['cov_mul'])
+				self.filter = KalmanFilter(cov*config['cov_mul'], 2, 2)
+				
 		return config
 
 if __name__ == '__main__':
