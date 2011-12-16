@@ -12,6 +12,7 @@ class MeanFilter(object):
 		return np.int32(np.average(self.observations, axis=0, weights=weights)).tolist()
 
 class KalmanFilter(object):
+	initialized = False
 	def __init__(self, cov, dynam_params, measure_params):
 		self.kf = cv.CreateKalman(dynam_params, measure_params)
 		cv.SetIdentity(self.kf.measurement_matrix, cv.RealScalar(1))
@@ -24,6 +25,9 @@ class KalmanFilter(object):
 		
 	def observation(self, meas):
 		meas = np.array([meas], dtype=np.float32)
+		if not self.initialized:
+			cv.Copy(meas.T.copy(), self.kf.state_post)
+			self.initialized = True
 		cv.KalmanPredict(self.kf)
 		corrected = np.asarray(cv.KalmanCorrect(self.kf, cv.fromarray(meas.T.copy())))
 		return corrected.T[0].copy()
