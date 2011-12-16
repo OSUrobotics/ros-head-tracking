@@ -1,0 +1,7 @@
+<launch>
+	<include file="$(find openni_launch)/launch/openni.launch"/>
+	<include file="$(find head_pose_estimation)/launch/estimator.launch"/>
+	<node name="mouse" pkg="rosmouse" type="mouse.py" output="screen" required="true">
+		<remap from="head_pose" to="head_pose_filtered"/>
+	</node>
+</launch>
