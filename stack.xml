@@ -1,7 +1,7 @@
 <stack>
   <description brief="head_tracking">head_tracking</description>
-  <author>Maintained by Lazewatsky Daniel</author>
-  <license>BSD</license>  
+  <author>Maintained by Daniel Lazewatsky</author>
+  <license>Multiple Licenses</license>  
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/head_tracking</url>
   <depend stack="ros" />

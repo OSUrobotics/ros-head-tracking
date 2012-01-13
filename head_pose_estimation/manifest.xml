@@ -4,8 +4,8 @@
      head_pose_estimation
 
   </description>
-  <author>Lazewatsky Daniel</author>
-  <license>BSD</license>
+  <author>Daniel Lazewatsky</author>
+  <license>Microsoft Shared Source</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/head_pose_estimation</url>
   <depend package="roscpp"/>
