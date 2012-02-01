@@ -1,8 +1,11 @@
 <launch>
-	<include file="$(find pi_face_tracker)/launch/face_tracker_kinect.launch"/>
+	<arg name="camera" default="camera"/>
+	<include file="$(find head_pose_estimation)/launch/face_tracker_kinect.launch">
+		<arg name="camera" value="$(arg camera)"/>
+	</include>
 
 	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen">
-		<remap from="cloud" to="/camera/depth/points"/>
+		<remap from="cloud" to="$(arg camera)/depth_registered/points"/>
 		<param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/>
 		<param name="ntrees" value="10"/>
 		<param name="max_variance" value="800.0"/>
