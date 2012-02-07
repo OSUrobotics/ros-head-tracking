@@ -17,10 +17,10 @@
 		<arg name="camera" value="$(arg camera)"/>
 	</include>
 
-	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen" machine="harris2">
+	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen"><!-- machine="harris2">-->
 		<remap from="cloud" to="$(arg camera)/depth_registered/points"/>
-		<param name="tree_path" value="/u/lazewatskyd/ros-pkgs/wu-ros-pkg/head_tracking/head_pose_estimation/trees/tree"/>
-		<!--param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/-->
+		<!--param name="tree_path" value="/u/lazewatskyd/ros-pkgs/wu-ros-pkg/head_tracking/head_pose_estimation/trees/tree"/-->
+		<param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/>
 		<param name="ntrees" value="10"/>
 		<param name="max_variance" value="800.0"/>
 		<param name="larger_radius_ratio" value="1.0"/>
