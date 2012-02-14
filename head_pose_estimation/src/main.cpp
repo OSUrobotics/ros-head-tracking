@@ -114,11 +114,14 @@ string g_head_target_frame;
 
 double g_last_head_depth = 0.5;
 
+bool g_transform_ready = false;
+
 CRForestEstimator estimator;
 ros::Publisher pose_pub;
 
 tf::TransformListener* listener;
 tf::TransformBroadcaster* broadcaster;
+tf::StampedTransform g_transform;
 
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
@@ -248,8 +251,9 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 			pose_msg.pose.position.z
 		));
 		trans.setRotation(tf::Quaternion(qx, qy, qz, qw));
-		broadcaster->sendTransform(tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin"));
-
+		g_transform = tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin");
+		// broadcaster->sendTransform(tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin"));
+		g_transform_ready = true;
 		pose_pub.publish(pose_msg);
 	}
 }
@@ -274,8 +278,18 @@ int main(int argc, char* argv[])
 		ROS_ERROR("could not read forest!");
 		exit(-1);
 	}
-
-	ros::spin();
+	
+	ros::Rate rate(20);
+	while(ros::ok()) {
+		if(g_transform_ready) {
+			g_transform.stamp_ = ros::Time::now();
+			broadcaster->sendTransform(g_transform);
+		}
+		ros::spinOnce();
+		rate.sleep();
+	}
+	
+	// ros::spin();
 	return 0;
 
 }
