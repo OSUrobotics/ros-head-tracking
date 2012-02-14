@@ -229,9 +229,13 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		head_point.point.z = pose[2]/1000;
 	
 		try {
+			listener->waitForTransform(head_point.header.frame_id, g_head_target_frame, ros::Time::now(), ros::Duration(2.0));
 			listener->transformPoint(g_head_target_frame, head_point, head_point_transformed);
 		} catch(tf::TransformException ex) {
-			ROS_WARN("Transform exception, dropping pose (don't worry, this is probably ok)");
+			ROS_WARN(
+				"Transform exception, when transforming point from %s to %s\ndropping pose (don't worry, this is probably ok)",
+				head_point.header.frame_id.c_str(), g_head_target_frame.c_str());
+				ROS_WARN("Exception was %s", ex.what());
 			return;
 		}
 		
