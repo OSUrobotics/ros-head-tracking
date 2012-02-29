@@ -16,7 +16,7 @@ class KalmanFilter(object):
 	def __init__(self, cov, dynam_params, measure_params):
 		self.kf = cv.CreateKalman(dynam_params, measure_params)
 		cv.SetIdentity(self.kf.measurement_matrix, cv.RealScalar(1))
-		self.set_cov(cov)
+		self.set_cov(cv.fromarray(cov))
 
 	def set_cov(self, cov):
 		cov = np.float32(cov)
@@ -26,7 +26,7 @@ class KalmanFilter(object):
 	def observation(self, meas):
 		meas = np.array([meas], dtype=np.float32)
 		if not self.initialized:
-			cv.Copy(meas.T.copy(), self.kf.state_post)
+			cv.Copy(cv.fromarray(meas.T.copy()), self.kf.state_post)
 			self.initialized = True
 		cv.KalmanPredict(self.kf)
 		corrected = np.asarray(cv.KalmanCorrect(self.kf, cv.fromarray(meas.T.copy())))
