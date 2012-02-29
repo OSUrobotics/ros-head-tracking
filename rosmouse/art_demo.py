@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import roslib; roslib.load_manifest('rosmouse')
+import rospy
+from geometry_msgs.msg import PointStamped
 import pygame
 from pygame.locals import * 
 from math import sqrt, pi, exp, sin
@@ -18,8 +20,11 @@ class Line(object):
 		self.stamp = time.clock()
 		
 	def draw(self, surface):
-		c = (int(self.brightness*(self.stamp/time.clock())**2), 0, 0)
+		c = (0, int(self.brightness*(self.stamp/time.clock())**2), 0)
+		pygame.draw.aaline(surface, c, (self.p1[0], self.p1[1]-1), (self.p2[0], self.p2[1]-1))
 		pygame.draw.aaline(surface, c, self.p1, self.p2)
+		pygame.draw.aaline(surface, c, (self.p1[0], self.p1[1]+1), (self.p2[0], self.p2[1]+1))
+		
 
 class Gaussian(object):
 	brightness = 255
@@ -42,21 +47,21 @@ class Gaussian(object):
 		return gaussian(1, self.sigma)
 		
 	# def draw(self, screen):
-	# 	c_max = self.find_max()
-	# 	TRANSPARENT = (255,0,255)
-	# 	for r in range(self.radius, 0, -1):
-	# 		s = pygame.Surface((r,r))
-	# 		# s.fill(TRANSPARENT)
-	# 		# s.set_colorkey(TRANSPARENT)
-	# 		red = int(self.brightness*gaussian(r, self.sigma)/c_max)
-	# 		c = (self.brightness, 0, 0)
-	# 		# pygame.draw.circle(screen, pygame.Color(self.brightness, 0, 0, 255-red), self.center, r)
-	# 		# s.fill((255, 255, 255, 255-red))
-	# 		
-	# 		# pygame.draw.circle(s, (0, self.brightness, 0, 255-red), self.center, r)
-	# 		pygame.draw.circle(s, (red,0,0), (r/2,r/2), r)
-	# 		s.set_alpha(red)
-	# 		screen.blit(s, (self.center[0]-r/2, self.center[1]-r/2))
+	#	c_max = self.find_max()
+	#	TRANSPARENT = (255,0,255)
+	#	for r in range(self.radius, 0, -1):
+	#		s = pygame.Surface((r,r))
+	#		# s.fill(TRANSPARENT)
+	#		# s.set_colorkey(TRANSPARENT)
+	#		red = int(self.brightness*gaussian(r, self.sigma)/c_max)
+	#		c = (self.brightness, 0, 0)
+	#		# pygame.draw.circle(screen, pygame.Color(self.brightness, 0, 0, 255-red), self.center, r)
+	#		# s.fill((255, 255, 255, 255-red))
+	#		
+	#		# pygame.draw.circle(s, (0, self.brightness, 0, 255-red), self.center, r)
+	#		pygame.draw.circle(s, (red,0,0), (r/2,r/2), r)
+	#		s.set_alpha(red)
+	#		screen.blit(s, (self.center[0]-r/2, self.center[1]-r/2))
 	def draw(self, screen):
 		pygame.draw.circle(screen, (int(self.brightness*(self.stamp/time.clock())**2), 0, 0), self.center, int(self.sigma))
 			
@@ -69,7 +74,8 @@ class ArtDemo(object):
 	running = False
 	gaussians = []
 
-	def __init__(self, fullscreen=False):
+	def __init__(self, fullscreen=False, use_mouse=True):
+		self.use_mouse = use_mouse
 		self.screen = pygame.display.set_mode((self.width, self.height))
 		if fullscreen:
 			modes = pygame.display.list_modes()
@@ -84,7 +90,7 @@ class ArtDemo(object):
 			elif event.type == KEYUP:
 				if event.key == 27:
 					self.running = False
-			elif event.type == MOUSEMOTION:
+			elif (event.type == MOUSEMOTION) and self.use_mouse:
 				self.pos = event.pos
 			else: 
 				# print event
@@ -104,15 +110,20 @@ class ArtDemo(object):
 			# self.draw_gaussian(50, self.pos)
 			# self.gaussians.append(Gaussian(self.pos))
 			# for g in self.gaussians:
-			# 	g.draw(self.screen)
+			#	g.draw(self.screen)
 			self.gaussians.append(Line(self.pos, last_pos))
 			for g in self.gaussians:
 				g.draw(self.screen)
-			pygame.draw.circle(self.screen, (255*abs(sin(time.clock()*2)), 0, 0), self.pos, 5)
+			pygame.draw.circle(self.screen, (0, 255*abs(sin(time.clock()*2)), 0), self.pos, int(10*abs(sin(time.clock()*2))))
 			pygame.display.flip()
 			last_pos = self.pos
 
 
+def mouse_cb(point, d):
+	d.pos = point.point.x, point.point.y
+
 if __name__ == '__main__':
-	d = ArtDemo(fullscreen=True)
+	d = ArtDemo(fullscreen=True, use_mouse=False)
+	rospy.init_node('art_demo')
+	rospy.Subscriber('mouse', PointStamped, mouse_cb, d)
 	d.run()
