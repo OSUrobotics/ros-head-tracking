@@ -49,17 +49,17 @@ class Mouse(object):
 	last_pose = None
 	pose_lock = RLock()
 	
-    do_move_mouse = True
+	do_move_mouse = True
     
     # cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,   1.9369e3]])
 	cov = np.matrix([[6.71485028,  18.75061549], [ 14.25320564,  82.71265061]])
 	filter = KalmanFilter(cov, 2, 2)
 	
 	def __init__(self):
-        self.do_move_mouse = rospy.get_param('~move_mouse', True)
+		self.do_move_mouse = rospy.get_param('~move_mouse', False)
 		self.subscribe()
 		self.calibrate()
-        self.mouse_pub = rospy.Publisher('mouse', PointStamped)
+		self.mouse_pub = rospy.Publisher('mouse', PointStamped)
 		self.listen_for_keyboard()
 
 	@thread
@@ -127,14 +127,14 @@ class Mouse(object):
 		if self.ready:
 			obs = [self.xFun(tan(pose[5])), self.yFun(tan(pose[4]))]
 			x, y = [int(n) for n in self.filter.observation(obs)]
-            if self.do_move_mouse:
-    			move_mouse(x, y)
-            mouse_msg = PointStamped()
-            mouse_msg.header.stamp = rospy.Time.now()
-            mouse_msg.x = x
-            mouse_msg.y = y
-            mouse_msg.z = 0
-            self.mouse_pub.publish(mouse_msg)
+			if self.do_move_mouse:
+				move_mouse(x, y)
+			mouse_msg = PointStamped()
+			mouse_msg.header.stamp = rospy.Time.now()
+			mouse_msg.point.x = x
+			mouse_msg.point.y = y
+			mouse_msg.point.z = 0
+			self.mouse_pub.publish(mouse_msg)
 		else:
 			with self.pose_lock:
 				self.last_pose = pose
