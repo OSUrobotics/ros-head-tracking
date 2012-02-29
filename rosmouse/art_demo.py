@@ -120,7 +120,7 @@ class ArtDemo(object):
 
 
 def mouse_cb(point, d):
-	d.pos = point.point.x, point.point.y
+	d.pos = int(point.point.x), int(point.point.y)
 
 if __name__ == '__main__':
 	d = ArtDemo(fullscreen=True, use_mouse=False)
