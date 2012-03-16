@@ -115,15 +115,23 @@ class ArtDemo(object):
 			for g in self.gaussians:
 				g.draw(self.screen)
 			pygame.draw.circle(self.screen, (0, 255*abs(sin(time.clock()*2)), 0), self.pos, int(10*abs(sin(time.clock()*2))))
+
+			#if len(self.gaussians) > 100:
+			#	Line(self.pos, self.gaussians[-100].p1).draw(self.screen)
+
+
 			pygame.display.flip()
-			last_pos = self.pos
+			if self.gaussians:
+				last_pos = self.gaussians[-1].p1
+			else:
+				last_pos = self.pos
 
 
 def mouse_cb(point, d):
 	d.pos = int(point.point.x), int(point.point.y)
 
 if __name__ == '__main__':
-	d = ArtDemo(fullscreen=True, use_mouse=False)
+	d = ArtDemo(fullscreen=True, use_mouse=True)
 	rospy.init_node('art_demo')
 	rospy.Subscriber('mouse', PointStamped, mouse_cb, d)
 	d.run()
