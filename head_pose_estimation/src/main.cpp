@@ -206,7 +206,6 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 	//assuming there's only one head in the image!
 	if(g_means.size() > 0) {	
 		geometry_msgs::PoseStamped pose_msg;
-		pose_msg.header.stamp = ros::Time::now();
 		pose_msg.header.frame_id = msg->header.frame_id;
 	
 		cv::Vec<float,POSE_SIZE> pose(g_means[0]);
@@ -258,6 +257,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		g_transform = tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin");
 		// broadcaster->sendTransform(tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin"));
 		g_transform_ready = true;
+		pose_msg.header.stamp = ros::Time::now();
 		pose_pub.publish(pose_msg);
 	}
 }
