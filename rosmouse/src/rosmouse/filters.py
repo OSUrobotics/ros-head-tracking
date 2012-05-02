@@ -33,6 +33,7 @@ class KalmanFilter(object):
 		meas = np.float32([meas])
 		if not self.initialized:
 			cv.Copy(cv.fromarray(meas.T.copy()), self.kf.state_post)
+			cv.Copy(cv.fromarray(meas.T.copy()), self.kf.state_pre)
 			self.initialized = True
 		if self.kf.CP == 0:
 			cv.KalmanPredict(self.kf)
@@ -40,7 +41,6 @@ class KalmanFilter(object):
 		return corrected.T[0].copy()
 		
 	def control(self, signal):
-		print signal
 		signal = np.float32([signal])
 		if not self.initialized:
 			return np.zeros(1,self.kf.DP)
@@ -60,8 +60,8 @@ if __name__ == '__main__':
 	import matplotlib.pyplot as plt
 	# cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,	1.9369e3]])
 	cov = np.ones((2,2))*100
-	f = KalmanFilter(cov, 2, 2, 0)
-	# f.set_control(cv.fromarray(np.matrix([[1.0,0.0],[0.0,1.0]])))
+	f = KalmanFilter(cov, 2, 2, 2)
+	f.set_control(cv.fromarray(np.matrix([[1.0,0.0],[0.0,1.0]])))
 	print np.asarray(f.kf.control_matrix)
 
 	observations = []
@@ -75,7 +75,7 @@ if __name__ == '__main__':
 		
 		corrected = f.observation(obs)
 		# filtered.append(corrected)
-		# predicted = f.control([1,0])
+		predicted = f.control([1,0])
 		filtered.append(corrected)
 	
 	observations = np.array(observations)
@@ -88,38 +88,3 @@ if __name__ == '__main__':
 	plt.plot(filtered[:,0])
 	plt.legend(['obs', 'filtered'])
 	plt.show()
-
-
-# if __name__ == '__main__':
-# 	def make_obs(x):
-# 		#gt = np.array([np.sin(x/75.0), np.cos(x/75.0)])*100
-# 			 # gt = [0,0]
-# 		gt = [ 2361.90541702,	 352.84006879]
-# 		# noise = np.random.multivariate_normal((0,0), cov)
-# 		# return gt, gt+noise
-# 		return gt, np.random.multivariate_normal(gt, cov)
-# 	
-# 	import matplotlib.pyplot as plt
-# 	cov = np.matrix([[ 4.1208e3, 2.3380e3], [-5.3681,	 1.9369e3]])
-# 	f = KalmanFilter(cov, 2, 2)
-# 
-# 	observations = []
-# 	filtered = []
-# 	gts = []
-# 	
-# 	for gt, obs in (make_obs(x) for x in xrange(1000)):
-# 		gts.append(gt)
-# 		observations.append(obs)
-# 		corrected = f.observation(obs)
-# 		filtered.append(corrected)
-# 	
-# 	observations = np.array(observations)
-# 	filtered = np.array(filtered)
-# 	gts = np.array(gts)
-# 	print observations[5:,0].std(), filtered[5:,0].std()
-# 	plt.clf()
-# 	plt.plot(observations[:,0])
-# 	plt.hold(True)
-# 	plt.plot(filtered[:,0])
-# 	plt.legend(['obs', 'filtered'])
-# 	plt.show()
