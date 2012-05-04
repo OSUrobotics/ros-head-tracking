@@ -29,8 +29,8 @@ class OpticFlow(object):
     bridge = CvBridge()
     vect_pub = rospy.Publisher('flow', Vector3)
 
-    def image_cb(msg):
-        im = self.bridge.imgmsg_to_cv(msg, 'mono8')
+    def image_cb(self, msg):
+        frame = np.asarray(self.bridge.imgmsg_to_cv(msg, 'mono8'))
         if self.last_frame is not None:
             next_pts, status, err = cv2.calcOpticalFlowPyrLK(self.last_frame, frame, self.prev_pts, None, **lk_params)
             diffs = (next_pts - self.prev_pts).squeeze()
@@ -48,9 +48,10 @@ class OpticFlow(object):
             
         else:
             self.prev_pts = cv2.goodFeaturesToTrack(frame, **feat_params)
-        self.last_frame = im
+        self.last_frame = frame
 
 if __name__ == '__main__':
     rospy.init_node('optic_flow')
     flow = OpticFlow()
     rospy.Subscriber('image', Image, flow.image_cb)
+    rospy.spin()

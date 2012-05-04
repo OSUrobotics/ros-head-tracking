@@ -36,18 +36,18 @@ class Filter(object):
 					
 		self.kf.update([p,y])
 		with self.control_lock:
-			self.kf.predict(self.control)
+			filtered = self.kf.predict(self.control)
 			self.control = np.float32([0,0])
 		
 		filtered_pose = PoseStamped(
 			header	= pose_msg.header,
 			pose	= Pose(
-						pose_msg.position,
-						Quaternion(r,filtered[0], filtered[1])
+						pose_msg.pose.position,
+						Quaternion(*quaternion_from_euler(r,filtered[0], filtered[1]))
 					  )
 		)
 		pose_pub.publish(filtered_pose)
-		cv.KalmanPredict(kf)
+		
 
 	def flow_cb(self, msg):
 		with self.control_lock:
