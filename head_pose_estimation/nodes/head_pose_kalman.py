@@ -43,15 +43,18 @@ class Filter(object):
 			header	= pose_msg.header,
 			pose	= Pose(
 						pose_msg.pose.position,
-						Quaternion(*quaternion_from_euler(r,filtered[0], filtered[1]))
+						Quaternion(*quaternion_from_euler(r, filtered[0], filtered[1]))
 					  )
 		)
 		pose_pub.publish(filtered_pose)
 		
 
 	def flow_cb(self, msg):
+		print msg
 		with self.control_lock:
-			self.control += [msg.x, msg.y]
+			#self.control += [msg.x, msg.y]
+			self.control += [msg.y, msg.x]
+			#self.control = [0,0]
 
 if __name__ == '__main__':
 	rospy.init_node('head_pose_filter')
