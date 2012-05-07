@@ -11,6 +11,10 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
+rosbuild_find_ros_package(dynamic_reconfigure)
+include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
+gencfg()
+
 FIND_PACKAGE(OpenCV REQUIRED)
 
 SET( 	HEAD_DEMO
@@ -33,7 +37,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
-rosbuild_add_executable( head_pose_estimation ${HEAD_DEMO})
+# rosbuild_add_executable( head_pose_estimation ${HEAD_DEMO})
 # rosbuild_add_executable( range_to_pcd src/range_to_pcd.cpp)
 # target_link_libraries (head_pose_estimation ${OpenCV_LIBS} )
 # target_link_libraries( range_to_pcd ${OpenCV_LIBS})

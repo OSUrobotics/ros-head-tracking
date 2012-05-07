@@ -5,6 +5,8 @@ from geometry_msgs.msg import PoseStamped, Pose, Point, Quaternion, Vector3
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 from collections import deque
 from state_filters import KalmanFilter
+from head_pose_estimation.cfg import FilterConfig
+from dynamic_reconfigure.server import Server
 import numpy as np
 import cv
 from threading import RLock
@@ -55,11 +57,16 @@ class Filter(object):
 			#self.control += [msg.x, msg.y]
 			self.control += [msg.y, msg.x]
 			#self.control = [0,0]
+			
+	def cfg_cb(self, config, level):
+		pass
 
 if __name__ == '__main__':
 	rospy.init_node('head_pose_filter')
 	f = Filter()
 	rospy.Subscriber('head_pose', PoseStamped, f.pose_sub)
 	rospy.Subscriber('flow', Vector3, f.flow_cb)
+	Server(FilterConfig, f.cfg_cb)
+	
 	pose_pub = rospy.Publisher('head_pose_filtered', PoseStamped)
 	rospy.spin()
