@@ -2,7 +2,6 @@
   <description brief="head_tracking">head_tracking</description>
   <author>Maintained by Daniel Lazewatsky</author>
   <license>BSD,Microsoft Shared Source,Multiple Licenses</license>  
-  <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/head_tracking</url>
   <depend stack="common_msgs" /> <!-- sensor_msgs, geometry_msgs -->
   <depend stack="driver_common" /> <!-- dynamic_reconfigure -->
