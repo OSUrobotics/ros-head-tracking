@@ -75,6 +75,8 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 
+#include "people_msgs/PositionMeasurement.h"
+
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 using namespace std;
@@ -112,9 +114,14 @@ Mat g_im3D;
 // Frame to transform the head pose to
 string g_head_target_frame;
 
-double g_last_head_depth = 0.5;
-
+bool g_head_depth_ready = false;
+bool g_cloud_ready = false;
 bool g_transform_ready = false;
+
+double g_head_depth = 0.5;
+
+
+string g_cloud_frame;
 
 CRForestEstimator estimator;
 ros::Publisher pose_pub;
@@ -126,9 +133,6 @@ tf::StampedTransform g_transform;
 std::vector< cv::Vec<float,POSE_SIZE> > g_means; //outputs
 std::vector< std::vector< Vote > > g_clusters; //full clusters of votes
 std::vector< Vote > g_votes; //all votes returned by the forest
-
-cv::Rect roi;
-bool roiReady = false;
 
 void loadConfig() {
 	ros::NodeHandle nh("~");
@@ -142,15 +146,26 @@ void loadConfig() {
 	nh.param("head_target_frame",   g_head_target_frame,    string("/camera_depth_frame"));
 }
 
-void roiCallback(const sensor_msgs::RegionOfInterest::ConstPtr& msg) {
-	roi = cv::Rect(msg->x_offset, msg->y_offset, msg->width, msg->height);
-	roiReady = true;
+void peopleCallback(const people_msgs::PositionMeasurement::ConstPtr& msg) {
+	g_head_depth_ready = true;
+	if(g_cloud_ready) {
+		geometry_msgs::PointStamped head_point, head_point_transformed;
+		head_point.header = msg->header;
+		head_point.point = msg->pos;
+		listener->transformPoint(g_cloud_frame, head_point, head_point_transformed);
+		g_head_depth = head_point_transformed.point.z;
+	}
 }
 
 void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 {
 	PointCloud cloud;
 	pcl::fromROSMsg(*msg, cloud);
+
+	g_cloud_frame = cloud.header.frame_id;
+	g_cloud_ready = true;
+
+	if(!g_head_depth_ready) return;
 
 	Mat img3D;
 	img3D = Mat::zeros(cloud.height, cloud.width, CV_32FC3);
@@ -160,21 +175,13 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 	yMin = 0; xMin = 0;
 	yMax = img3D.rows; xMax = img3D.cols;
 
-	double head_depth = cloud.at(roi.x + roi.width/2,roi.y + roi.height/2).z;
-	
-	//threshold around the detected face
-	if(head_depth > 0) //if head_depth is nan, this will return false
-		g_last_head_depth = head_depth;
-	else
-		head_depth = g_last_head_depth;
-
 	//get 3D from depth
 	for(int y = yMin ; y < img3D.rows; y++) {
 		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
 	
 		for(int x = xMin; x < img3D.cols; x++) {
 			pcl::PointXYZ p = cloud.at(x,y);
-			if((p.z>head_depth-0.2) && (p.z<head_depth+0.2)) {
+			if((p.z>g_head_depth-0.2) && (p.z<g_head_depth+0.2)) {
 				img3Di[x][0] = p.x*1000;
 				img3Di[x][1] = p.y*1000;
 				img3Di[x][2] = hypot(img3Di[x][0], p.z*1000); //they seem to have trained with incorrectly projected 3D points
@@ -272,7 +279,7 @@ int main(int argc, char* argv[])
 	
 	image_transport::ImageTransport it(nh);
 	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
-	ros::Subscriber roi_sub = nh.subscribe<sensor_msgs::RegionOfInterest>("roi", 1, roiCallback);
+	ros::Subscriber face_pos_sub = nh.subscribe<people_msgs::PositionMeasurement>("/face_detector/people_tracker_measurements", 1, peopleCallback);
 	
 	pose_pub = nh.advertise<geometry_msgs::PoseStamped>("head_pose", 1);
 	
@@ -291,9 +298,6 @@ int main(int argc, char* argv[])
 		}
 		ros::spinOnce();
 		rate.sleep();
-	}
-	
-	// ros::spin();
+	}	
 	return 0;
-
 }

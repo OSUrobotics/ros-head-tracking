@@ -1,20 +1,8 @@
 <launch>
-	<machine
-		name="harris1"
-		address="10.68.0.1"
-		default="never"
-		ros-package-path="/u/lazewatskyd/ros-pkgs:/opt/ros/electric/stacks"
-	/>
-	<machine
-		name="harris2"
-		address="10.68.0.2"
-		default="never"
-		ros-package-path="/u/lazewatskyd/ros-pkgs:/opt/ros/electric/stacks"
-	/>
-	
 	<arg name="camera" default="camera"/>
 	<arg name="filter_pose" default="false"/>
-	<include file="$(find head_pose_estimation)/launch/face_tracker_kinect.launch">
+
+	<include file="$(find face_detector)/launch/face_detector.rgbd.launch">
 		<arg name="camera" value="$(arg camera)"/>
 	</include>
 
@@ -34,10 +22,7 @@
 	<!--node name="head_pose_filter" type="head_pose_filter.py" pkg="head_pose_estimation" output="screen">
 		<param name="window_size" value="20"/>
 	</node-->
-	<node if="$(arg filter_pose)" name="optic_flow" type="flow.py" pkg="head_pose_estimation">
-		<remap from="image" to="$(arg camera)/rgb/image_mono"/>
-	</node>
-	<node if="$(arg filter_pose)" name="head_pose_kalman" type="head_pose_kalman.py" pkg="head_pose_estimation">
+	<!--node if="$(arg filter_pose)" name="head_pose_kalman" type="head_pose_kalman.py" pkg="head_pose_estimation">
 		<remap from="head_pose_filtered" to="head_pose_kalman"/>
-	</node>
+	</node-->
 </launch>
