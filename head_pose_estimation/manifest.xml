@@ -23,6 +23,7 @@
   <depend package="dynamic_reconfigure"/>
   <depend package="headmath"/>
   <depend package="state_filters"/>
+  <depend package="people_msgs"/>
 </package>
 
 
