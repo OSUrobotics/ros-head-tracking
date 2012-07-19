@@ -120,8 +120,11 @@ bool g_transform_ready = false;
 
 double g_head_depth = 0.5;
 
-
 string g_cloud_frame;
+
+double g_roll_bias = 0;
+double g_pitch_bias = 0;
+double g_yaw_bias = 0;
 
 CRForestEstimator estimator;
 ros::Publisher pose_pub;
@@ -144,6 +147,11 @@ void loadConfig() {
 	nh.param("stride",              g_stride,               5);
 	nh.param("head_threshold",      g_th,                   400);
 	nh.param("head_target_frame",   g_head_target_frame,    string("/camera_depth_frame"));
+	nh.param("angular_bias_roll",   g_roll_bias,            0.0);
+	nh.param("angular_bias_pitch",  g_pitch_bias,           0.0);
+	nh.param("angular_bias_yaw",    g_yaw_bias,             0.0);
+
+	
 }
 
 void peopleCallback(const people_msgs::PositionMeasurement::ConstPtr& msg) {
@@ -218,9 +226,9 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		cv::Vec<float,POSE_SIZE> pose(g_means[0]);
 	
 		KDL::Rotation r = KDL::Rotation::RPY(
-											 from_degrees( pose[5]+180), 
-											 from_degrees(-pose[3]+180),
-											 from_degrees(-pose[4]    )
+											 from_degrees( pose[5]+180+g_roll_bias ), 
+											 from_degrees(-pose[3]+180+g_pitch_bias),
+											 from_degrees(-pose[4]+    g_yaw_bias  )
 											);
 		double qx, qy, qz, qw;
 		r.GetQuaternion(qx, qy, qz, qw);
@@ -265,7 +273,12 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		// broadcaster->sendTransform(tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin"));
 		g_transform_ready = true;
 		pose_msg.header.stamp = ros::Time::now();
-		pose_pub.publish(pose_msg);
+		geometry_msgs::PoseStamped zero_pose;
+		zero_pose.header.frame_id = "head_origin";
+		zero_pose.header.stamp = ros::Time::now();
+		zero_pose.pose.orientation.w = 1;
+		//pose_pub.publish(pose_msg);
+		pose_pub.publish(zero_pose);
 	}
 }
 
@@ -293,7 +306,7 @@ int main(int argc, char* argv[])
 	ros::Rate rate(20);
 	while(ros::ok()) {
 		if(g_transform_ready) {
-			g_transform.stamp_ = ros::Time::now();
+			g_transform.stamp_ = ros::Time::now() + ros::Duration(1.0);
 			broadcaster->sendTransform(g_transform);
 		}
 		ros::spinOnce();
