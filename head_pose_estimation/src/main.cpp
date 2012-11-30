@@ -77,6 +77,8 @@
 
 #include "people_msgs/PositionMeasurement.h"
 
+#include <image_geometry/pinhole_camera_model.h>
+
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 using namespace std;
@@ -155,13 +157,19 @@ void loadConfig() {
 }
 
 void peopleCallback(const people_msgs::PositionMeasurement::ConstPtr& msg) {
-	g_head_depth_ready = true;
+	
 	if(g_cloud_ready) {
 		geometry_msgs::PointStamped head_point, head_point_transformed;
 		head_point.header = msg->header;
 		head_point.point = msg->pos;
-		listener->transformPoint(g_cloud_frame, head_point, head_point_transformed);
-		g_head_depth = head_point_transformed.point.z;
+		try {
+			listener->transformPoint(g_cloud_frame, head_point, head_point_transformed);
+			g_head_depth = head_point_transformed.point.z;
+			g_head_depth_ready = true;
+		} catch(tf::TransformException ex) {
+
+		}
+		
 	}
 }
 
@@ -189,7 +197,10 @@ void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msg
 	yMin = 0; xMin = 0;
 	yMax = img3D.rows; xMax = img3D.cols;
 
-	g_head_depth *= 1000;
+	double head_depth = g_head_depth * 1000;
+
+	image_geometry::PinholeCameraModel cam_model;
+	cam_model.fromCameraInfo(info);
 
 	for(int y = 0; y < img3D.rows; y++)
 	{
@@ -197,35 +208,19 @@ void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msg
 		const float* depthImgi = depthImg.ptr<float>(y);
 	
 		for(int x = 0; x < img3D.cols; x++){
-	
-			float d = depthImgi[x] * 1000;
-			if ((d>g_head_depth-2000) && (d<g_head_depth+2000)){
-				img3Di[x][0] = d * (float(x) - info->K[2])/info->K[0];
-				img3Di[x][1] = d * (float(y) - info->K[5])/info->K[4];
+			double d = depthImgi[x] * 1000;			
+			if ((d>head_depth-2000) && (d<head_depth+2000)){
+				cv::Point2d pt(x,y);
+				cv::Point3d ray = cam_model.projectPixelTo3dRay(pt) * d;
+				img3Di[x][0] = ray.x;
+				img3Di[x][1] = ray.y;
 				img3Di[x][2] = d;
 			} else{
 				img3Di[x] = 0;
 			}
 		}
 	}
-
-	//get 3D from depth
-	// for(int y = yMin ; y < img3D.rows; y++) {
-	// 	Vec3f* img3Di = img3D.ptr<Vec3f>(y);
-	
-	// 	for(int x = xMin; x < img3D.cols; x++) {
-	// 		pcl::PointXYZ p = cloud.at(x,y);
-	// 		if((p.z>g_head_depth-0.2) && (p.z<g_head_depth+0.2)) {
-	// 			img3Di[x][0] = p.x*1000;
-	// 			img3Di[x][1] = p.y*1000;
-	// 			img3Di[x][2] = hypot(img3Di[x][0], p.z*1000); //they seem to have trained with incorrectly projected 3D points
-	// 			//img3Di[x][2] = p.z*1000;
-	// 		} else {
-	// 			img3Di[x] = 0;
-	// 		}
-	// 	}
-	// }
-	
+		
 	g_means.clear();
 	g_votes.clear();
 	g_clusters.clear();
