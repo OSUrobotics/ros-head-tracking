@@ -178,12 +178,14 @@ void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msg
 {
 	cv_bridge::CvImagePtr cv_ptr;
 	try{
-		cv_ptr = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_32FC1);
+		cv_ptr = cv_bridge::toCvCopy(depth_msg);//, sensor_msgs::image_encodings::TYPE_32FC1);
 	}catch (cv_bridge::Exception& e){
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 	}
 
 	cv::Mat depthImg = cv_ptr->image;
+	cv::medianBlur(depthImg, depthImg, 5);
+	// cv::GaussianBlur(depthImg, depthImg, cv::Size(0,0), 2.0);
 
 	g_cloud_frame = depth_msg->header.frame_id;
 	g_cloud_ready = true;
@@ -193,10 +195,6 @@ void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msg
 	Mat img3D;
 	img3D = Mat::zeros( depthImg.rows, depthImg.cols, CV_32FC3 );
 	
-	int yMin, xMin, yMax, xMax;
-	yMin = 0; xMin = 0;
-	yMax = img3D.rows; xMax = img3D.cols;
-
 	double head_depth = g_head_depth * 1000;
 
 	image_geometry::PinholeCameraModel cam_model;
@@ -209,7 +207,7 @@ void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msg
 	
 		for(int x = 0; x < img3D.cols; x++){
 			double d = depthImgi[x] * 1000;			
-			if ((d>head_depth-2000) && (d<head_depth+2000)){
+			if ((d>head_depth-150) && (d<head_depth+150)){
 				cv::Point2d pt(x,y);
 				cv::Point3d ray = cam_model.projectPixelTo3dRay(pt) * d;
 				img3Di[x][0] = ray.x;
@@ -220,7 +218,7 @@ void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msg
 			}
 		}
 	}
-		
+
 	g_means.clear();
 	g_votes.clear();
 	g_clusters.clear();
