@@ -7,7 +7,7 @@
 	</include>
 
 	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen"><!-- machine="harris2">-->
-		<remap from="cloud" to="$(arg camera)/depth/points"/>
+		<remap from="depth" to="$(arg camera)/depth/image_rect"/>
 		<param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/>
 		<param name="ntrees" value="10"/>
 		<param name="max_variance" value="800.0"/>
