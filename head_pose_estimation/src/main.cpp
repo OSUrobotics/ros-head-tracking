@@ -76,6 +76,7 @@
 #include <tf/transform_broadcaster.h>
 
 #include "people_msgs/PositionMeasurement.h"
+#include "people_msgs/PositionMeasurementArray.h"
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
@@ -154,12 +155,13 @@ void loadConfig() {
 	
 }
 
-void peopleCallback(const people_msgs::PositionMeasurement::ConstPtr& msg) {
-	g_head_depth_ready = true;
-	if(g_cloud_ready) {
+void peopleCallback(const people_msgs::PositionMeasurementArray::ConstPtr& msg) {
+	if(g_cloud_ready && (msg->people.size() > 0)) {
+		g_head_depth_ready = true;
+		people_msgs::PositionMeasurement person = msg->people[0];
 		geometry_msgs::PointStamped head_point, head_point_transformed;
-		head_point.header = msg->header;
-		head_point.point = msg->pos;
+		head_point.header = person.header;
+		head_point.point = person.pos;
 		listener->transformPoint(g_cloud_frame, head_point, head_point_transformed);
 		g_head_depth = head_point_transformed.point.z;
 	}
@@ -292,7 +294,7 @@ int main(int argc, char* argv[])
 	
 	image_transport::ImageTransport it(nh);
 	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
-	ros::Subscriber face_pos_sub = nh.subscribe<people_msgs::PositionMeasurement>("/face_detector/people_tracker_measurements", 1, peopleCallback);
+	ros::Subscriber face_pos_sub = nh.subscribe<people_msgs::PositionMeasurementArray>("/face_detector/people_tracker_measurements_array", 1, peopleCallback);
 	
 	pose_pub = nh.advertise<geometry_msgs::PoseStamped>("head_pose", 1);
 	
