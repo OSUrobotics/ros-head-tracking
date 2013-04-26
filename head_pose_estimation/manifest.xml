@@ -1,7 +1,8 @@
 <package>
   <description brief="head_pose_estimation">
 
-     head_pose_estimation
+     ROS wrapper around Fanelli et al.'s Real Time Head Pose Estimation from Consumer Depth Cameras. 33rd Annual Symposium of the German Association for Pattern Recognition (DAGM'11), 2011.
+
 
   </description>
   <author>Daniel Lazewatsky</author>
@@ -22,7 +23,6 @@
   <depend package="message_filters"/>
   <depend package="dynamic_reconfigure"/>
   <depend package="headmath"/>
-  <!--depend package="state_filters"/-->
   <depend package="people_msgs"/>
   <depend package="face_detector"/>
 </package>
