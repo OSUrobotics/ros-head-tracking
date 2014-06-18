@@ -15,10 +15,8 @@
   <depend package="tf"/>
   <depend package="sensor_msgs"/>
   <depend package="cv_bridge"/>
-  <depend package="pcl"/>
   <depend package="pcl_ros"/>
   <depend package="image_transport"/>
-  <depend package="kdl"/>
   <depend package="angles"/>
   <depend package="message_filters"/>
   <depend package="dynamic_reconfigure"/>

@@ -226,14 +226,13 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		pose_msg.header.frame_id = msg->header.frame_id;
 	
 		cv::Vec<float,POSE_SIZE> pose(g_means[0]);
-	
-		KDL::Rotation r = KDL::Rotation::RPY(
-											 from_degrees( pose[5]+180+g_roll_bias ), 
-											 from_degrees(-pose[3]+180+g_pitch_bias),
-											 from_degrees(-pose[4]+    g_yaw_bias  )
-											);
-		double qx, qy, qz, qw;
-		r.GetQuaternion(qx, qy, qz, qw);
+
+		tf::Quaternion q;
+		q.setRPY(
+			from_degrees( pose[5]+180+g_roll_bias ), 
+			from_degrees(-pose[3]+180+g_pitch_bias),
+			from_degrees(-pose[4]+    g_yaw_bias  )
+		);
 	
 		geometry_msgs::PointStamped head_point;
 		geometry_msgs::PointStamped head_point_transformed;
@@ -260,17 +259,17 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		pose_msg.pose.position = head_point_transformed.point;
 		pose_msg.header.frame_id = head_point_transformed.header.frame_id;
 	
-		pose_msg.pose.orientation.x = qx;
-		pose_msg.pose.orientation.y = qy;
-		pose_msg.pose.orientation.z = qz;
-		pose_msg.pose.orientation.w = qw;
+		pose_msg.pose.orientation.x = q.x();
+		pose_msg.pose.orientation.y = q.y();
+		pose_msg.pose.orientation.z = q.z();
+		pose_msg.pose.orientation.w = q.w();
 
 		trans.setOrigin(tf::Vector3(
 			pose_msg.pose.position.x, 
 			pose_msg.pose.position.y, 
 			pose_msg.pose.position.z
 		));
-		trans.setRotation(tf::Quaternion(qx, qy, qz, qw));
+		trans.setRotation(q);
 		g_transform = tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin");
 		// broadcaster->sendTransform(tf::StampedTransform(trans, pose_msg.header.stamp, pose_msg.header.frame_id, "head_origin"));
 		g_transform_ready = true;
