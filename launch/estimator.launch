@@ -18,10 +18,16 @@
 		<param name="head_target_frame" value="$(arg camera)_depth_frame"/>
 	</node>
 	
+
+	<node
+		name="cloud_relay"
+		pkg="topic_tools"
+		type="relay"
+		args="$(arg camera)/depth_registered/hw_registered/image_rect_raw $(arg camera)/depth_registered/image_rect_raw"
+	/>
+
+
 	<!--node name="head_pose_filter" type="head_pose_filter.py" pkg="head_pose_estimation" output="screen">
 		<param name="window_size" value="20"/>
-	</node-->
-	<!--node if="$(arg filter_pose)" name="head_pose_kalman" type="head_pose_kalman.py" pkg="head_pose_estimation">
-		<remap from="head_pose_filtered" to="head_pose_kalman"/>
 	</node-->
 </launch>
