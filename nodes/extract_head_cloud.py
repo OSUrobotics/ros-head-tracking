@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import roslib; roslib.load_manifest('head_pose_estimation')
 import rospy
 from sensor_msgs.msg import RegionOfInterest, Image, CameraInfo
 import message_filters
