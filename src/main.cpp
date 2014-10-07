@@ -55,7 +55,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
-#include "CRForestEstimator.h"
+#include "head_pose_estimation/CRForestEstimator.h"
 
 #include <ros/ros.h>
 #include "sensor_msgs/Image.h"
