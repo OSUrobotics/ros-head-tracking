@@ -1,6 +1,22 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-
+# Catkin User Guide: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/user_guide.html
+# Catkin CMake Standard: http://www.ros.org/doc/groovy/api/catkin/html/user_guide/standards.html
+cmake_minimum_required(VERSION 2.8.3)
+project(head_pose_estimation)
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  rospy
+  geometry_msgs
+  tf
+  sensor_msgs
+  cv_bridge
+  pcl_ros
+  image_transport
+  angles
+  message_filters
+  dynamic_reconfigure
+  people_msgs
+  face_detector
+)
 # Set the build type.  Options are:
 #  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
 #  Debug          : w/ debug symbols, w/o optimization
@@ -9,13 +25,8 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
-rosbuild_init()
-
-rosbuild_find_ros_package(dynamic_reconfigure)
-include(${dynamic_reconfigure_PACKAGE_PATH}/cmake/cfgbuild.cmake)
-gencfg()
-
 FIND_PACKAGE(OpenCV REQUIRED)
+FIND_PACKAGE(PCL REQUIRED)
 
 SET( 	HEAD_DEMO
 		src/CRForestEstimator.cpp
@@ -28,17 +39,16 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-#uncomment if you have defined messages
-#rosbuild_genmsg()
-#uncomment if you have defined services
-#rosbuild_gensrv()
+add_executable( head_pose_estimation ${HEAD_DEMO})
+include_directories(${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${PCL_LIBRARIES})
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-rosbuild_add_executable( head_pose_estimation ${HEAD_DEMO})
-# rosbuild_add_executable( range_to_pcd src/range_to_pcd.cpp)
-# target_link_libraries (head_pose_estimation ${OpenCV_LIBS} )
-# target_link_libraries( range_to_pcd ${OpenCV_LIBS})
-# target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+catkin_package(
+    DEPENDS roscpp rospy geometry_msgs tf sensor_msgs cv_bridge pcl_ros image_transport angles message_filters dynamic_reconfigure headmath people_msgs face_detector
+    CATKIN_DEPENDS # TODO
+    INCLUDE_DIRS # TODO include
+    LIBRARIES # TODO
+)
