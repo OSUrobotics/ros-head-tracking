@@ -39,16 +39,50 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 #set the default path for built libraries to the "lib" directory
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
+catkin_package(
+    INCLUDE_DIRS include
+    CATKIN_DEPENDS roscpp
+                   rospy
+                   geometry_msgs
+                   tf
+                   sensor_msgs
+                   cv_bridge
+                   pcl_ros
+                   image_transport
+                   angles
+                   message_filters
+                   dynamic_reconfigure
+                   people_msgs
+                   face_detector
+    # LIBRARIES # TODO
+)
+
 add_executable( head_pose_estimation ${HEAD_DEMO})
-include_directories(${Boost_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+include_directories(
+  include
+  ${Boost_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+)
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${PCL_LIBRARIES})
 
-catkin_package(
-    DEPENDS roscpp rospy geometry_msgs tf sensor_msgs cv_bridge pcl_ros image_transport angles message_filters dynamic_reconfigure headmath people_msgs face_detector
-    CATKIN_DEPENDS # TODO
-    INCLUDE_DIRS # TODO include
-    LIBRARIES # TODO
+
+install(TARGETS
+  head_pose_estimation
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+install(DIRECTORY include/${PROJECT_NAME}
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)
+
+install(DIRECTORY launch
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(DIRECTORY trees
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
