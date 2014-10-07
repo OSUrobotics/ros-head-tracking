@@ -1,0 +1,65 @@
+<package>
+  <name>head_pose_estimation</name>
+  <version>1.0.0</version>
+  <description>ROS wrapper around Fanelli et al.'s Real Time Head Pose Estimation from Consumer Depth Cameras. 33rd Annual Symposium of the German Association for Pattern Recognition (DAGM'11), 2011.</description>
+  <maintainer email="dan@lazewatsky.com">Dan Lazewatsky</maintainer>
+
+  <license>Microsoft Shared Source</license>
+
+  <url type="website">http://ros.org/wiki/head_pose_estimation</url>
+  <!-- <url type="bugtracker"></url> -->
+
+  <author>Dan Lazewatsky</author>
+
+  <!-- Dependencies which this package needs to build itself. -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- Dependencies needed to compile this package. -->
+  <build_depend>roscpp</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>cv_bridge</build_depend>
+  <build_depend>pcl_ros</build_depend>
+  <build_depend>image_transport</build_depend>
+  <build_depend>angles</build_depend>
+  <build_depend>message_filters</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+  <build_depend>people_msgs</build_depend>
+  <build_depend>face_detector</build_depend>
+  <build_depend>python-numpy</build_depend>
+
+  <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>roscpp</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>cv_bridge</run_depend>
+  <run_depend>pcl_ros</run_depend>
+  <run_depend>image_transport</run_depend>
+  <run_depend>angles</run_depend>
+  <run_depend>message_filters</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
+  <run_depend>people_msgs</run_depend>
+  <run_depend>face_detector</run_depend>
+  <run_depend>python-numpy</run_depend>
+
+  <!-- Dependencies needed only for running tests. -->
+  <!-- <test_depend>roscpp</test_depend> -->
+  <!-- <test_depend>rospy</test_depend> -->
+  <!-- <test_depend>geometry_msgs</test_depend> -->
+  <!-- <test_depend>tf</test_depend> -->
+  <!-- <test_depend>sensor_msgs</test_depend> -->
+  <!-- <test_depend>cv_bridge</test_depend> -->
+  <!-- <test_depend>pcl_ros</test_depend> -->
+  <!-- <test_depend>image_transport</test_depend> -->
+  <!-- <test_depend>angles</test_depend> -->
+  <!-- <test_depend>message_filters</test_depend> -->
+  <!-- <test_depend>dynamic_reconfigure</test_depend> -->
+  <!-- <test_depend>headmath</test_depend> -->
+  <!-- <test_depend>people_msgs</test_depend> -->
+  <!-- <test_depend>face_detector</test_depend> -->
+
+</package>
