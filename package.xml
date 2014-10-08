@@ -1,6 +1,6 @@
 <package>
   <name>head_pose_estimation</name>
-  <version>1.0.1</version>
+  <version>1.0.2</version>
   <description>ROS wrapper around Fanelli et al.'s Real Time Head Pose Estimation from Consumer Depth Cameras. 33rd Annual Symposium of the German Association for Pattern Recognition (DAGM'11), 2011.</description>
   <maintainer email="dan@lazewatsky.com">Dan Lazewatsky</maintainer>
 
