@@ -25,19 +25,14 @@ find_package(catkin REQUIRED COMPONENTS
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
 #set(ROS_BUILD_TYPE RelWithDebInfo)
 
-FIND_PACKAGE(OpenCV REQUIRED)
-FIND_PACKAGE(PCL REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(PCL REQUIRED)
 
-SET( 	HEAD_DEMO
+set( 	HEAD_DEMO
 		src/CRForestEstimator.cpp
 		src/CRTree.cpp
 		src/main.cpp 
 )
-
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 catkin_package(
     INCLUDE_DIRS include
@@ -62,6 +57,7 @@ include_directories(
   include
   ${Boost_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
