@@ -27,6 +27,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 find_package(PCL REQUIRED)
+find_package(orocos_kdl REQUIRED) 
 
 set( 	HEAD_DEMO
 		src/CRForestEstimator.cpp
@@ -49,8 +50,7 @@ catkin_package(
                    dynamic_reconfigure
                    people_msgs
                    face_detector
-    # LIBRARIES # TODO
-)
+) 
 
 add_executable( head_pose_estimation ${HEAD_DEMO})
 include_directories(
@@ -58,11 +58,13 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
   ${PCL_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
+  ${orocos_kdl_INCLUDE_DIRS}
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES})
+  ${PCL_LIBRARIES}
+  ${orocos_kdl_LIBRARIES})
 
 
 install(TARGETS
