@@ -155,53 +155,7 @@ void loadConfig() {
 	
 }
 
-void peopleCallback(const people_msgs::PositionMeasurementArray::ConstPtr& msg) {
-	if(g_cloud_ready && (msg->people.size() > 0)) {
-		g_head_depth_ready = true;
-		people_msgs::PositionMeasurement person = msg->people[0];
-		geometry_msgs::PointStamped head_point, head_point_transformed;
-		head_point.header = person.header;
-		head_point.point = person.pos;
-		listener->transformPoint(g_cloud_frame, head_point, head_point_transformed);
-		g_head_depth = head_point_transformed.point.z;
-	}
-}
-
-void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
-{
-	PointCloud cloud;
-	pcl::fromROSMsg(*msg, cloud);
-
-	g_cloud_frame = cloud.header.frame_id;
-	g_cloud_ready = true;
-
-	if(!g_head_depth_ready) return;
-
-	Mat img3D;
-	img3D = Mat::zeros(cloud.height, cloud.width, CV_32FC3);
-	//img3D.create(cloud.height, cloud.width, CV_32FC3);
-	
-	int yMin, xMin, yMax, xMax;
-	yMin = 0; xMin = 0;
-	yMax = img3D.rows; xMax = img3D.cols;
-
-	//get 3D from depth
-	for(int y = yMin ; y < img3D.rows; y++) {
-		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
-	
-		for(int x = xMin; x < img3D.cols; x++) {
-			pcl::PointXYZ p = cloud.at(x,y);
-			if((p.z>g_head_depth-0.2) && (p.z<g_head_depth+0.2)) {
-				img3Di[x][0] = p.x*1000;
-				img3Di[x][1] = p.y*1000;
-				img3Di[x][2] = hypot(img3Di[x][0], p.z*1000); //they seem to have trained with incorrectly projected 3D points
-				//img3Di[x][2] = p.z*1000;
-			} else {
-				img3Di[x] = 0;
-			}
-		}
-	}
-	
+void estimateAndPublish(Mat img3D) {
 	g_means.clear();
 	g_votes.clear();
 	g_clusters.clear();
@@ -223,7 +177,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 	//assuming there's only one head in the image!
 	if(g_means.size() > 0) {	
 		geometry_msgs::PoseStamped pose_msg;
-		pose_msg.header.frame_id = msg->header.frame_id;
+		pose_msg.header.frame_id = g_cloud_frame;
 	
 		cv::Vec<float,POSE_SIZE> pose(g_means[0]);
 
@@ -281,6 +235,102 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 		//pose_pub.publish(pose_msg);
 		pose_pub.publish(zero_pose);
 	}
+
+}
+
+
+void peopleCallback(const people_msgs::PositionMeasurementArray::ConstPtr& msg) {
+	if(g_cloud_ready && (msg->people.size() > 0)) {
+		g_head_depth_ready = true;
+		people_msgs::PositionMeasurement person = msg->people[0];
+		geometry_msgs::PointStamped head_point, head_point_transformed;
+		head_point.header = person.header;
+		head_point.point = person.pos;
+		listener->transformPoint(g_cloud_frame, head_point, head_point_transformed);
+		g_head_depth = head_point_transformed.point.z;
+	}
+}
+
+void depthCallback(const sensor_msgs::ImageConstPtr& depth_msg, const sensor_msgs::CameraInfoConstPtr& info) {
+	// ROS_INFO("got depth");
+	cv_bridge::CvImagePtr cv_ptr;
+	try {
+		cv_ptr = cv_bridge::toCvCopy(depth_msg, sensor_msgs::image_encodings::TYPE_32FC1);
+	} catch (cv_bridge::Exception& e){
+		ROS_ERROR("cv_bridge exception: %s", e.what());
+	}
+	
+	cv::Mat depthImg = cv_ptr->image;
+	g_cloud_frame = depth_msg->header.frame_id;
+	g_cloud_ready = true;
+
+	if(!g_head_depth_ready) return;
+
+	Mat img3D;
+	img3D = Mat::zeros( depthImg.rows, depthImg.cols, CV_32FC3 );
+
+	int yMin, xMin, yMax, xMax;
+	yMin = 0; xMin = 0;
+	yMax = img3D.rows; xMax = img3D.cols;
+
+	g_head_depth *= 1000;
+
+	for(int y = 0; y < img3D.rows; y++)
+	{
+		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
+		const float* depthImgi = depthImg.ptr<float>(y);
+	
+		for(int x = 0; x < img3D.cols; x++){
+			float d = depthImgi[x];
+			if ((d>g_head_depth-2000) && (d<g_head_depth+2000)){
+				img3Di[x][0] = d * (float(x) - info->K[2])/info->K[0];
+				img3Di[x][1] = d * (float(y) - info->K[5])/info->K[4];
+				img3Di[x][2] = d;
+			} else{
+				img3Di[x] = 0;
+			}
+		}
+	}
+
+	estimateAndPublish(img3D);
+}
+
+void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
+{
+	PointCloud cloud;
+	pcl::fromROSMsg(*msg, cloud);
+
+	g_cloud_frame = cloud.header.frame_id;
+	g_cloud_ready = true;
+
+	if(!g_head_depth_ready) return;
+
+	Mat img3D;
+	img3D = Mat::zeros(cloud.height, cloud.width, CV_32FC3);
+	//img3D.create(cloud.height, cloud.width, CV_32FC3);
+	
+	int yMin, xMin, yMax, xMax;
+	yMin = 0; xMin = 0;
+	yMax = img3D.rows; xMax = img3D.cols;
+
+	//get 3D from depth
+	for(int y = yMin ; y < img3D.rows; y++) {
+		Vec3f* img3Di = img3D.ptr<Vec3f>(y);
+	
+		for(int x = xMin; x < img3D.cols; x++) {
+			pcl::PointXYZ p = cloud.at(x,y);
+			if((p.z>g_head_depth-0.2) && (p.z<g_head_depth+0.2)) {
+				img3Di[x][0] = p.x*1000;
+				img3Di[x][1] = p.y*1000;
+				img3Di[x][2] = hypot(img3Di[x][0], p.z*1000); //they seem to have trained with incorrectly projected 3D points
+				//img3Di[x][2] = p.z*1000;
+			} else {
+				img3Di[x] = 0;
+			}
+		}
+	}
+	
+	estimateAndPublish(img3D);
 }
 
 int main(int argc, char* argv[])
@@ -293,6 +343,7 @@ int main(int argc, char* argv[])
 	
 	image_transport::ImageTransport it(nh);
 	ros::Subscriber cloud_sub = nh.subscribe<sensor_msgs::PointCloud2>("cloud", 1, cloudCallback);
+	image_transport::CameraSubscriber depth_sub = it.subscribeCamera("depth", 1, depthCallback);
 	ros::Subscriber face_pos_sub = nh.subscribe<people_msgs::PositionMeasurementArray>("/face_detector/people_tracker_measurements_array", 1, peopleCallback);
 	
 	pose_pub = nh.advertise<geometry_msgs::PoseStamped>("head_pose", 1);

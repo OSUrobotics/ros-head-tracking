@@ -1,13 +1,16 @@
 <launch>
 	<arg name="camera" default="camera"/>
 	<arg name="filter_pose" default="false"/>
+	<arg name="use_depthimage" default="false"/>
 
 	<include file="$(find face_detector)/launch/face_detector.rgbd.launch">
 		<arg name="camera" value="$(arg camera)"/>
 	</include>
 
 	<node name="head_pose_estimator" type="head_pose_estimation" pkg="head_pose_estimation" output="screen"><!-- machine="harris2">-->
-		<remap from="cloud" to="$(arg camera)/depth_registered/points"/>
+		<remap from="cloud" to="$(arg camera)/depth_registered/points" unless="$(arg use_depthimage)"/>
+		<remap from="depth" to="$(arg camera)/depth_registered/image_raw" if="$(arg use_depthimage)"/>
+		<remap from="camera_info" to="$(arg camera)/depth_registered/camera_info" if="$(arg use_depthimage)"/>
 		<param name="tree_path" value="$(find head_pose_estimation)/trees/tree"/>
 		<param name="ntrees" value="10"/>
 		<param name="max_variance" value="800.0"/>
