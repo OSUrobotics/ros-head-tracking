@@ -2,6 +2,12 @@
 Changelog for package head_pose_estimation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* cleanup
+* remove unused launch files
+* Contributors: Dan Lazewatsky
+
 1.0.2 (2014-10-08)
 ------------------
 * add kdl dep
